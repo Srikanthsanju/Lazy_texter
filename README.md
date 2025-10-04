@@ -1,2 +1,2 @@
 # Lazy_texter
-AI Persona Chat Assistant with personality-driven generation, using Retrieval Augmented Generation. Supports distinctive personas, multi-chat threading, vector embedding, and cloud-native deployment.
+AI-powered response assistant with RAG-based semantic memory. Features 5 distinct personas, multi-chat threading, vector embeddings (ChromaDB), and serverless cloud deployment. Built with Flask, Gemini API, and deployed on Google Cloud Run.
