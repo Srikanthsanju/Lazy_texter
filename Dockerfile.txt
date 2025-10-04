@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+Set the working directory in the container
+WORKDIR /app
+
+Copy the requirements file and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+Copy the rest of the application code
+COPY app.py . # RENAME HERE
+
+IMPORTANT: Remove the API Key from the file and store it as an Environment Variable
+The server will run on port 8080 (required by Cloud Run)
+ENV PORT 8080s
+
+Expose the port
+EXPOSE 8080
+
+Run the application using gunicorn (a production web server)
+The command tells Gunicorn to use the 'app' module and the 'app' Flask instance.
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 app:app # RENAME HERE

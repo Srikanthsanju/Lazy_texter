@@ -1,0 +1,6 @@
+Flask
+requests
+flask-cors
+gunicorn
+chromadb
+sentence-transformers

@@ -1,0 +1,315 @@
+# AI Persona Chat Assistant
+
+A cloud-deployed conversational AI system that generates contextually-aware responses in multiple distinct personas, featuring RAG-based semantic memory and dual-mode generation (full response generation + style rewriting).
+
+## Overview
+
+This project implements an intelligent text response assistant with personality-driven generation. It uses Retrieval-Augmented Generation (RAG) with vector embeddings to maintain conversation context and offers two operational modes: generating complete responses from scratch or rephrasing user-provided drafts in a selected persona's style.
+
+Built with production-ready architecture deployed on Google Cloud Run, the system maintains separate conversation threads with independent semantic memory, making it suitable for managing multiple communication contexts simultaneously.
+
+## Features
+
+- **RAG-Based Memory**: Semantic search using ChromaDB for contextually-aware conversation retrieval
+- **5 Distinct Personas**: Each with unique communication styles and characteristics
+- **Dual-Mode Operation**: 
+  - Full generation (AI creates complete responses)
+  - Style rewriting (AI rephrases user drafts in persona voice)
+- **Multi-Chat Threading**: Separate conversation contexts (Timo/Shark) with isolated memories
+- **Vector Embeddings**: Sentence-transformers for semantic similarity search
+- **Cloud-Native**: Serverless deployment on Google Cloud Run
+- **Real-Time Interface**: Chat-style UI with click-to-copy functionality
+
+## Tech Stack
+
+### Backend
+- **Framework**: Flask (Python 3.11)
+- **AI Model**: Google Gemini 2.5 Flash
+- **Vector Database**: ChromaDB with HNSW indexing
+- **Embeddings**: Sentence-Transformers (all-MiniLM-L6-v2)
+- **Server**: Gunicorn WSGI
+
+### Cloud & Infrastructure
+- **Platform**: Google Cloud Run (serverless)
+- **Containerization**: Docker
+- **Deployment**: gcloud SDK
+
+### Frontend
+- **Framework**: Vanilla JavaScript
+- **Styling**: Tailwind CSS
+- **API Communication**: Fetch API
+
+## Personas
+
+1. **The Strategist**: Inspired by Gary Johnson from Hitman - analytical, composed, subtly humorous
+2. **The Visionary**: Inspired by Eddie Morra from Limitless - charismatic, confident, magnetic
+3. **The Rebel**: Inspired by Tyler Durden from Fight Club - anti-establishment, philosophical, raw
+4. **The Orator**: Inspired by 18th-century rhetoric - eloquent, poetic, refined
+5. **The Conversationalist**: Modern Gen Z style - casual, witty, relatable
+
+## Architecture
+
+```
+┌─────────────┐         ┌──────────────┐         ┌─────────────┐
+│   Browser   │────────▶│  Flask API   │────────▶│   Gemini    │
+│   (HTML/JS) │◀────────│  (Cloud Run) │◀────────│     API     │
+└─────────────┘         └──────────────┘         └─────────────┘
+                              │
+                              ▼
+                        ┌──────────────┐
+                        │   ChromaDB   │
+                        │   (Vectors)  │
+                        └──────────────┘
+```
+
+### RAG Flow
+1. User sends message
+2. ChromaDB converts message to vector embedding
+3. Semantic search finds similar past conversations (cosine similarity)
+4. Retrieved context augments LLM prompt
+5. Gemini generates persona-specific response
+6. Response stored in vector database for future retrieval
+
+## Installation & Deployment
+
+### Prerequisites
+- Python 3.11+
+- Google Cloud account with billing enabled
+- Gemini API key
+- gcloud SDK installed
+
+### Local Setup
+
+```bash
+# Clone repository
+git clone <your-repo-url>
+cd ai-persona-chat
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variable
+export GEMINI_API_KEY="your_api_key_here"
+
+# Run locally
+python app.py
+```
+
+Access at `http://localhost:5000`
+
+### Cloud Deployment
+
+```bash
+# Authenticate
+gcloud auth login
+
+# Set project
+gcloud config set project YOUR_PROJECT_ID
+
+# Deploy to Cloud Run
+gcloud run deploy persona-assistant \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars GEMINI_API_KEY=YOUR_API_KEY
+
+# Get deployment URL
+gcloud run services describe persona-assistant \
+  --region us-central1 \
+  --format 'value(status.url)'
+```
+
+First deployment takes 5-10 minutes (downloads embedding model).
+
+## Usage
+
+### Mode 1: Full Response Generation
+1. Select a chat thread (Timo/Shark)
+2. Choose a persona
+3. Select stance (Agree/Disagree)
+4. Type incoming message
+5. Leave response hint **empty**
+6. Click "Generate Response"
+7. Click generated response to copy
+
+### Mode 2: Style Rewriting
+1. Select a chat thread
+2. Choose a persona
+3. Type incoming message
+4. Type your draft response in hint box
+5. Click "Generate Response"
+6. AI rephrases your draft in persona style
+
+### Example Workflow
+
+**Incoming message**: "What are you doing tonight?"
+
+**Option A - Full generation**:
+- Hint: *empty*
+- Output: "Orchestrating my evening with calculated precision, naturally." (The Visionary)
+
+**Option B - Style rewriting**:
+- Hint: "going to dinner"
+- Output: "Executing a strategic dining engagement, as one does." (The Strategist)
+
+## Project Evolution
+
+### Phase 1: Local Prototype
+- Single persona (Albert Camus style)
+- Command-line interface
+- Direct API calls
+- No memory or context
+
+### Phase 2: Multi-Persona Web App
+- 5 distinct personas
+- Flask REST API
+- Concurrent API calls (ThreadPoolExecutor)
+- Cloud Run deployment
+- Web interface with Tailwind CSS
+
+### Phase 3: Memory & Threading
+- Conversation memory system
+- Dual chat threads (Timo/Shark)
+- Topic-based context retrieval
+- Chat-style UI with message history
+
+### Phase 4: RAG Implementation
+- ChromaDB vector database
+- Sentence-transformers embeddings
+- Semantic similarity search
+- Response hint feature (dual-mode)
+
+## Technical Highlights
+
+### RAG System
+- Converts conversations to 384-dimensional vectors
+- Uses HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search
+- Cosine similarity matching for semantic relevance
+- Retrieves top-3 similar conversations automatically
+
+### Memory Management
+- Stores last 20 conversations per chat thread
+- Automatic cleanup of old conversations
+- Thread-isolated memory (Timo/Shark separate)
+- Metadata tracking (persona, stance, timestamp)
+
+### Prompt Engineering
+- Dynamic length control based on input size
+- Stance-aware instruction modification
+- Context injection from retrieved conversations
+- Format cleanup (removes markdown artifacts)
+
+### Performance
+- Response time: 2-5 seconds
+- Serverless auto-scaling
+- In-memory vector storage
+- Token budget: 2048 max output tokens
+
+## API Endpoints
+
+### POST /generate
+Generate persona response with optional hint.
+
+**Request:**
+```json
+{
+  "message": "user input text",
+  "persona": "The Strategist",
+  "stance": "Agree",
+  "chat_id": "Timo",
+  "response_hint": "optional draft"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "reply": "generated response",
+  "persona": "The Strategist"
+}
+```
+
+### GET /memory/{chat_id}
+Retrieve conversation history.
+
+### DELETE /memory/{chat_id}
+Clear conversation memory.
+
+### GET /personas
+Get list of available personas with descriptions.
+
+## Limitations
+
+- **Memory persistence**: Resets on Cloud Run restart (in-memory storage)
+- **Single user**: No authentication or multi-user support
+- **Rate limiting**: None implemented (relies on Gemini API limits)
+- **Embedding model**: Uses default sentence-transformers (not optimized)
+- **Context window**: Limited to last 20 conversations
+
+## Future Enhancements
+
+### Messaging Platform Integration
+- **WhatsApp**: Use Twilio API or WhatsApp Business API
+- **Telegram**: Telegram Bot API (easiest to implement)
+- **Browser Extension**: Chrome/Firefox extension for in-context assistance
+- **Mobile Keyboard**: Custom keyboard app (iOS/Android)
+
+### Technical Improvements
+- Persistent storage (Cloud Storage mount)
+- User authentication (Firebase Auth)
+- Response caching (Redis)
+- Hybrid search (keyword + semantic)
+- Fine-tuned embedding models
+- Streaming responses (SSE)
+- A/B testing framework
+
+### Feature Additions
+- Custom persona creation
+- Conversation export
+- Multi-language support
+- Voice input/output
+- Confidence scoring
+- Response alternatives
+
+## Cost Estimate
+
+### Free Tier Usage
+- Cloud Run: 2M requests/month free
+- Gemini API: ~60 requests/day free
+- **Estimated monthly cost**: $0-5 for personal use
+
+### Production Scale
+- 10K requests/month: ~$10-20
+- 100K requests/month: ~$50-100
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+Contributions welcome. Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit pull request with clear description
+
+## Acknowledgments
+
+- Google Gemini API for LLM capabilities
+- ChromaDB for vector storage
+- Sentence-Transformers for embeddings
+- Tailwind CSS for UI components
+
+## Contact
+
+For questions or feedback, please open an issue on GitHub.
+
+---
+
+**Built as a portfolio project demonstrating:**
+- RAG implementation
+- Cloud-native architecture
+- Prompt engineering
+- Full-stack development
+- Production deployment practices
